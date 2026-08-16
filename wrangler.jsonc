@@ -10,6 +10,16 @@
     "command": "pnpm build"
   },
 
+  // Custom domains: Cloudflare creates the DNS records and issues the TLS
+  // certificates on deploy, so this needs no dashboard DNS work. Both spellings
+  // are listed because a custom domain matches its hostname exactly — an apex
+  // entry does not cover www. Only production deploys (from the default branch)
+  // attach these; a branch preview build will not.
+  "routes": [
+    { "pattern": "momsanytime.com", "custom_domain": true },
+    { "pattern": "www.momsanytime.com", "custom_domain": true }
+  ],
+
   // The site is entirely static, so there is no Worker script: `assets` with no
   // `main` deploys the built client on its own. `server/index.ts` stays for
   // `pnpm start` and Node hosts — Workers cannot run an Express listener.
