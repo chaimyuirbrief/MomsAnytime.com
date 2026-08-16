@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Editorial illustration of a sunlit kitchen table">
+  <title>Sunlit kitchen table</title>
+  <defs>
+    <radialGradient id="hero-sun" cx="0.78" cy="0.14" r="0.85">
+      <stop offset="0" stop-color="#fdf4e0" />
+      <stop offset="0.55" stop-color="#f7ead0" stop-opacity="0.55" />
+      <stop offset="1" stop-color="#f2e7d3" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="hero-table" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dcc6a2" />
+      <stop offset="1" stop-color="#cbb08a" />
+    </linearGradient>
+    <filter id="hero-grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="900" fill="#f2e7d3" />
+  <rect width="1200" height="900" fill="url(#hero-sun)" />
+
+  <!-- Window light falling across the back wall -->
+  <g fill="#fdf6e4" opacity="0.62">
+    <path d="M735 0 1010 0 800 640 545 640Z" />
+    <path d="M1055 0 1200 0 1200 640 895 640Z" opacity="0.75" />
+  </g>
+  <g stroke="#e0cfae" stroke-width="5" opacity="0.5" fill="none">
+    <path d="M905 0 690 640" />
+    <path d="M700 250 1120 250" />
+  </g>
+
+  <!-- Three figures, unequal, gathered around the table. Each torso rises to meet
+       the head so shoulders and head read as one silhouette. -->
+  <g opacity="0.93">
+    <!-- eldest, left -->
+    <g fill="#7d8f7a">
+      <path d="M182 640C182 545 235 409 300 409C365 409 418 545 418 640Z" />
+      <circle cx="300" cy="374" r="64" />
+    </g>
+    <!-- middle, centre -->
+    <g fill="#54705f">
+      <path d="M482 640C482 530 542 364 612 364C682 364 742 530 742 640Z" />
+      <circle cx="612" cy="326" r="70" />
+    </g>
+    <!-- youngest, right -->
+    <g fill="#8fa189">
+      <path d="M780 640C780 570 821 459 872 459C923 459 964 570 964 640Z" />
+      <circle cx="872" cy="432" r="50" />
+    </g>
+  </g>
+
+  <!-- Table -->
+  <rect x="0" y="640" width="1200" height="260" fill="url(#hero-table)" />
+  <rect x="0" y="640" width="1200" height="9" fill="#b99a72" />
+  <g stroke="#c0a37c" stroke-width="3" opacity="0.55" fill="none">
+    <path d="M0 726h1200" />
+    <path d="M0 806h1200" />
+  </g>
+
+  <!-- Teapot -->
+  <g>
+    <path d="M300 700c0-38 34-62 78-62s78 24 78 62c0 40-35 66-78 66s-78-26-78-66Z" fill="#c96a55" />
+    <path d="M456 676c34-6 46 14 40 34-5 17-24 22-38 16" fill="none" stroke="#c96a55" stroke-width="13" stroke-linecap="round" />
+    <path d="M300 690c-30 4-38 20-32 34" fill="none" stroke="#c96a55" stroke-width="13" stroke-linecap="round" />
+    <rect x="356" y="622" width="44" height="17" rx="8" fill="#b45c48" />
+  </g>
+
+  <!-- Cups -->
+  <g fill="#f7efe0">
+    <ellipse cx="560" cy="740" rx="40" ry="15" />
+    <path d="M520 740c0 24 18 40 40 40s40-16 40-40Z" />
+    <ellipse cx="672" cy="762" rx="34" ry="13" />
+    <path d="M638 762c0 21 15 35 34 35s34-14 34-35Z" />
+  </g>
+
+  <!-- Flowers in a jar -->
+  <g>
+    <g fill="none" stroke="#788d6f" stroke-width="7" stroke-linecap="round">
+      <path d="M920 700C918 646 906 610 884 582" />
+      <path d="M934 700C944 652 966 618 996 598" />
+      <path d="M927 700C927 660 929 632 936 606" />
+    </g>
+    <g fill="#d85b45">
+      <circle cx="880" cy="572" r="24" />
+      <circle cx="1002" cy="590" r="20" />
+      <circle cx="938" cy="596" r="16" />
+    </g>
+    <circle cx="880" cy="572" r="9" fill="#f0d9a8" />
+    <circle cx="1002" cy="590" r="7" fill="#f0d9a8" />
+    <path d="M886 700h82l-9 74h-64Z" fill="#e9dcc6" />
+  </g>
+
+  <!-- Paper grain -->
+  <rect width="1200" height="900" filter="url(#hero-grain)" opacity="0.11" style="mix-blend-mode:multiply" />
+</svg>
