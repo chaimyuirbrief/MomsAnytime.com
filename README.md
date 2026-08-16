@@ -94,6 +94,22 @@ for `pnpm start` and Node hosts; Workers cannot run an Express listener.
 `.node-version` pins Node 22 for the build. Vite 7 requires
 `^20.19.0 || >=22.12.0` and will fail on anything older.
 
+### Custom domains
+
+`momsanytime.com` and `www.momsanytime.com` are declared under `routes` with
+`custom_domain: true`. Cloudflare creates the DNS records and issues the
+certificates during deploy, so no dashboard DNS work is needed. Both hostnames
+are listed deliberately — a custom domain matches its hostname exactly, so an
+apex entry does not also cover `www`.
+
+Only **production** deploys attach custom domains. A branch preview build will
+succeed without putting the site on either hostname, so a change to `routes`
+does not take effect until it lands on the default branch.
+
+Cloudflare refuses to create a custom domain over a hostname that already has a
+CNAME record. If a deploy fails on the routes step, check DNS for a pre-existing
+record on that hostname and delete it before retrying.
+
 ## Notes
 
 - Type is loaded from Google Fonts (DM Serif Display + Manrope) via an `@import`
