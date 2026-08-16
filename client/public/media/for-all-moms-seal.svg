@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="For All the Moms seal">
+  <title>For All the Moms seal</title>
+  <!--
+    The Keepsake Almanac mark: a hand-pressed circular seal holding a simplified
+    nesting-line heart built from three unequal contours. No typography inside,
+    so it stays legible at favicon size.
+  -->
+  <g fill="none" stroke="#d85b45" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Seal ring, deliberately a little out of true so it reads as hand-pressed -->
+    <path
+      d="M32 2.6C47.5 2.4 61.8 16.4 61.4 32.3 61 47.9 47.2 61.6 31.6 61.4 16.2 61.2 2.3 47.4 2.6 31.7 2.9 16.3 16.6 2.8 32 2.6Z"
+      stroke-width="2.6" />
+    <!-- Three unequal heart contours, nested about the seal's centre -->
+    <g stroke-width="3">
+      <path
+        d="M32 48c0 0-18-12-18-21.5C14 21.2 18.2 17 23.5 17c3.5 0 6.7 1.9 8.5 4.7 1.8-2.8 5-4.7 8.5-4.7 5.3 0 9.5 4.2 9.5 9.5C50 36 32 48 32 48Z" />
+    </g>
+    <g stroke-width="2.4" transform="translate(32 31) scale(0.64) translate(-32 -31)">
+      <path
+        d="M32 48c0 0-18-12-18-21.5C14 21.2 18.2 17 23.5 17c3.5 0 6.7 1.9 8.5 4.7 1.8-2.8 5-4.7 8.5-4.7 5.3 0 9.5 4.2 9.5 9.5C50 36 32 48 32 48Z" />
+    </g>
+    <g stroke-width="2" transform="translate(32 31) scale(0.31) translate(-32 -31)">
+      <path
+        d="M32 48c0 0-18-12-18-21.5C14 21.2 18.2 17 23.5 17c3.5 0 6.7 1.9 8.5 4.7 1.8-2.8 5-4.7 8.5-4.7 5.3 0 9.5 4.2 9.5 9.5C50 36 32 48 32 48Z" />
+    </g>
+  </g>
+</svg>

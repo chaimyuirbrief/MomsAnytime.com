@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Editorial illustration of two people assembling an album by a window">
+  <title>Assembling an album by a window</title>
+  <defs>
+    <linearGradient id="win-glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdf7e8" />
+      <stop offset="1" stop-color="#f3e6c9" />
+    </linearGradient>
+    <filter id="win-grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+  </defs>
+
+  <rect width="800" height="1000" fill="#ece0c9" />
+
+  <!-- Window -->
+  <rect x="118" y="60" width="564" height="540" rx="6" fill="url(#win-glass)" />
+  <g stroke="#bda882" stroke-width="12" fill="none">
+    <rect x="118" y="60" width="564" height="540" rx="6" />
+    <path d="M400 60v540" />
+    <path d="M118 330h564" />
+  </g>
+
+  <!-- Light spilling into the room -->
+  <path d="M118 600 682 600 760 830 40 830Z" fill="#fbf3df" opacity="0.7" />
+
+  <!-- Two figures, unequal, seated at the table against the window. Each torso
+       rises to meet the head so shoulders and head read as one silhouette. -->
+  <g fill="#54705f">
+    <path d="M104 800C104 686 169 543 250 543C331 543 396 686 396 800Z" />
+    <circle cx="250" cy="500" r="78" />
+  </g>
+  <g fill="#84977e">
+    <path d="M438 800C438 706 491 584 556 584C621 584 674 706 674 800Z" />
+    <circle cx="556" cy="548" r="66" />
+  </g>
+
+  <!-- Table -->
+  <rect x="0" y="800" width="800" height="200" fill="#c9ab82" />
+  <rect x="0" y="800" width="800" height="8" fill="#ab8d66" />
+
+  <!-- Open album, two facing pages -->
+  <g transform="rotate(-2 400 866)">
+    <rect x="196" y="812" width="200" height="128" rx="4" fill="#f8f1e2" stroke="#c3ad88" stroke-width="4" />
+    <rect x="404" y="812" width="200" height="128" rx="4" fill="#f8f1e2" stroke="#c3ad88" stroke-width="4" />
+    <path d="M400 812v128" stroke="#c3ad88" stroke-width="5" />
+    <!-- pasted-in snapshots -->
+    <rect x="222" y="836" width="70" height="56" fill="#dfcdaa" />
+    <rect x="308" y="844" width="62" height="48" fill="#cbb491" />
+    <rect x="430" y="838" width="66" height="54" fill="#d5c09c" />
+    <!-- a few lines of handwriting beside them -->
+    <g fill="none" stroke="#b7a184" stroke-width="4" stroke-linecap="round">
+      <path d="M516 850h64" />
+      <path d="M516 872h48" />
+      <path d="M516 894h58" />
+    </g>
+  </g>
+
+  <!-- A single keepsake-red seal on the page corner -->
+  <circle cx="612" cy="806" r="15" fill="#d85b45" opacity="0.85" />
+
+  <rect width="800" height="1000" filter="url(#win-grain)" opacity="0.11" style="mix-blend-mode:multiply" />
+</svg>

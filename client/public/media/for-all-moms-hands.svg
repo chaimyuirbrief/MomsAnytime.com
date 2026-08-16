@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1000" role="img" aria-label="Editorial illustration of hands writing a note and arranging flowers on a wooden table">
+  <title>Hands writing a note and arranging flowers</title>
+  <defs>
+    <linearGradient id="hands-wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9a77c" />
+      <stop offset="1" stop-color="#b08e65" />
+    </linearGradient>
+    <filter id="hands-grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+  </defs>
+
+  <!-- Wooden table, seen from above -->
+  <rect width="1120" height="1000" fill="url(#hands-wood)" />
+  <g stroke="#a8865e" stroke-width="3" opacity="0.32" fill="none">
+    <path d="M0 148h1120" />
+    <path d="M0 402h1120" />
+    <path d="M0 656h1120" />
+    <path d="M0 890h1120" />
+  </g>
+  <g stroke="#bd9a70" stroke-width="3" opacity="0.4" fill="none">
+    <path d="M0 250c260 26 520-24 780 8 130 16 230 6 340-12" />
+    <path d="M0 540c300-30 560 30 830 2 110-12 200-26 290-44" />
+    <path d="M0 780c240 34 470-18 700 6 150 16 290 4 420-18" />
+  </g>
+
+  <!-- Cut flowers waiting to be arranged -->
+  <g fill="none" stroke="#7d9070" stroke-width="9" stroke-linecap="round">
+    <path d="M268 268c112-40 232-46 348-24" />
+    <path d="M286 206c96-24 196-24 292 4" />
+    <path d="M470 812c104 22 214 18 320-6" />
+  </g>
+  <g fill="#8fa382">
+    <ellipse cx="470" cy="228" rx="34" ry="16" transform="rotate(-12 470 228)" />
+    <ellipse cx="404" cy="188" rx="30" ry="14" transform="rotate(8 404 188)" />
+    <ellipse cx="640" cy="818" rx="32" ry="15" transform="rotate(9 640 818)" />
+  </g>
+  <g fill="#d85b45">
+    <circle cx="252" cy="274" r="29" />
+    <circle cx="272" cy="200" r="24" />
+    <circle cx="454" cy="806" r="26" />
+  </g>
+  <g fill="#e8927c">
+    <circle cx="246" cy="268" r="11" />
+    <circle cx="267" cy="195" r="9" />
+    <circle cx="449" cy="801" r="10" />
+  </g>
+
+  <!-- Sheet of notepaper, slightly askew -->
+  <g transform="rotate(-4 520 520)">
+    <rect x="326" y="330" width="388" height="386" rx="3" fill="#f8f2e4" />
+    <rect x="326" y="330" width="388" height="386" rx="3" fill="none" stroke="#dcc9a6" stroke-width="4" />
+    <g fill="none" stroke="#c2ad8b" stroke-width="5" stroke-linecap="round">
+      <path d="M372 406h250" />
+      <path d="M372 456h296" />
+      <path d="M372 506h220" />
+      <path d="M372 556h276" />
+      <path d="M372 606h180" />
+    </g>
+  </g>
+
+  <!-- Pen, held over the page -->
+  <g transform="rotate(30 742 470)">
+    <rect x="726" y="292" width="26" height="212" rx="12" fill="#2f4038" />
+    <rect x="726" y="470" width="26" height="14" fill="#b98a5e" />
+    <path d="M726 504h26l-13 32Z" fill="#2f4038" />
+  </g>
+
+  <!-- Hand reaching in from the right, holding the pen -->
+  <g fill="#d8b48f">
+    <rect x="884" y="428" width="236" height="184" rx="90" />
+    <ellipse cx="900" cy="520" rx="86" ry="92" />
+  </g>
+  <g fill="none" stroke="#d8b48f" stroke-linecap="round">
+    <path d="M872 462 778 448" stroke-width="30" />
+    <path d="M868 498 750 494" stroke-width="32" />
+    <path d="M868 534 762 546" stroke-width="30" />
+    <path d="M876 566 792 592" stroke-width="26" />
+    <path d="M914 594 870 650" stroke-width="32" />
+  </g>
+
+  <!-- Hand reaching in from the lower left, laying down a stem -->
+  <g fill="#c79a72">
+    <rect x="-60" y="826" width="300" height="156" rx="78" />
+    <ellipse cx="250" cy="858" rx="84" ry="88" />
+  </g>
+  <g fill="none" stroke="#c79a72" stroke-linecap="round">
+    <path d="M300 812 392 776" stroke-width="29" />
+    <path d="M298 846 402 830" stroke-width="30" />
+    <path d="M294 878 388 886" stroke-width="28" />
+    <path d="M284 906 360 934" stroke-width="25" />
+    <path d="M238 792 214 722" stroke-width="30" />
+  </g>
+
+  <rect width="1120" height="1000" filter="url(#hands-grain)" opacity="0.12" style="mix-blend-mode:multiply" />
+</svg>
