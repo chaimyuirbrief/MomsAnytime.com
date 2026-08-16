@@ -1,7 +1,14 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "momsanytime-com",
   "compatibility_date": "2026-08-01",
+
+  // Build the client here rather than relying on the Workers Builds dashboard
+  // having a build command configured. The repo was connected to Cloudflare
+  // while it still held only a README, so no framework preset was detected and
+  // dist/public would otherwise never be produced. Running it twice is a no-op.
+  "build": {
+    "command": "pnpm build"
+  },
 
   // The site is entirely static, so there is no Worker script: `assets` with no
   // `main` deploys the built client on its own. `server/index.ts` stays for

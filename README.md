@@ -85,9 +85,14 @@ The repo is wired to Cloudflare Workers Builds (worker `momsanytime-com`).
 `dist/public` directly with no Worker script, and falls back to `index.html` for
 unknown paths so client-side routing works.
 
-Cloudflare's build command must produce `dist/public` — `pnpm build` does, and
-also emits `dist/index.js`, which the Workers deploy ignores. That Express server
-is for `pnpm start` and Node hosts; Workers cannot run an Express listener.
+`wrangler.jsonc` also carries a `build.command` of `pnpm build`, so `npx wrangler
+deploy` produces `dist/public` on its own and the deploy does not depend on a
+build command being configured in the Cloudflare dashboard. `pnpm build` also
+emits `dist/index.js`, which the Workers deploy ignores — that Express server is
+for `pnpm start` and Node hosts; Workers cannot run an Express listener.
+
+`.node-version` pins Node 22 for the build. Vite 7 requires
+`^20.19.0 || >=22.12.0` and will fail on anything older.
 
 ## Notes
 
