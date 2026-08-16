@@ -78,6 +78,17 @@ and it would be wrong for a photograph. The frames expect roughly 4:3 (hero),
 0.8 portrait (window), and 1.12 (hands); CSS applies `object-fit: cover`, so
 other ratios crop rather than distort.
 
+## Deployment
+
+The repo is wired to Cloudflare Workers Builds (worker `momsanytime-com`).
+[`wrangler.jsonc`](wrangler.jsonc) declares an assets-only Worker: it serves
+`dist/public` directly with no Worker script, and falls back to `index.html` for
+unknown paths so client-side routing works.
+
+Cloudflare's build command must produce `dist/public` — `pnpm build` does, and
+also emits `dist/index.js`, which the Workers deploy ignores. That Express server
+is for `pnpm start` and Node hosts; Workers cannot run an Express listener.
+
 ## Notes
 
 - Type is loaded from Google Fonts (DM Serif Display + Manrope) via an `@import`

@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "momsanytime-com",
+  "compatibility_date": "2026-08-01",
+
+  // The site is entirely static, so there is no Worker script: `assets` with no
+  // `main` deploys the built client on its own. `server/index.ts` stays for
+  // `pnpm start` and Node hosts — Workers cannot run an Express listener.
+  "assets": {
+    "directory": "./dist/public",
+    // wouter routes on the client, so unknown paths must return index.html
+    // rather than a 404 page.
+    "not_found_handling": "single-page-application"
+  }
+}
