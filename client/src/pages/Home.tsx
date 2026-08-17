@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUpRight, Heart, Sparkles } from "lucide-react";
 import { handsPhoto, heroPhoto, seal, windowPhoto } from "@/media";
+import ContributeForm from "@/components/ContributeForm";
 
 const reflectionLines = [
   "For the rides given, the questions asked, and the doors held open.",
@@ -53,6 +54,7 @@ export default function Home() {
           <a href="#honor">The honor</a>
           <a href="#many-ways">Many ways</a>
           <a href="#dedication">A dedication</a>
+          <a href="#contribute">Add your voice</a>
         </nav>
         <button className="quiet-button" onClick={() => scrollToSection("dedication")}>
           <span>Pause here</span>
@@ -191,6 +193,25 @@ export default function Home() {
                 </button>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="contribute-section" id="contribute" aria-labelledby="contribute-title">
+          <div className="contribute-grid">
+            <div className="contribute-intro">
+              <p className="section-index">V. Add your voice</p>
+              <h2 id="contribute-title">This page is not finished.</h2>
+              <p>
+                It never will be, and that is the point. Tell us about someone who
+                mothered you, or offer what you have—an hour, a photograph, a better
+                sentence—to make this a wider room.
+              </p>
+              <span className="margin-line" aria-hidden="true" />
+              <p className="contribute-aside">
+                Every note is read by a person, not a system.
+              </p>
+            </div>
+            <ContributeForm />
           </div>
         </section>
       </main>
