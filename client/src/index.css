@@ -198,6 +198,82 @@ h1 {
 .reflection-card p { max-width: 470px; min-height: 52px; margin-bottom: 1.3rem; color: #31463c; font-family: "DM Serif Display", Georgia, serif; font-size: clamp(1.3rem, 2vw, 1.72rem); font-style: italic; line-height: 1.2; }
 .reflection-button { color: #506158; font-size: 0.61rem; }
 
+.contribute-section { padding: clamp(6rem, 10vw, 9.5rem) max(1.25rem, calc((100vw - 1180px) / 2)); background: #e8dbca; }
+.contribute-grid { display: grid; grid-template-columns: minmax(260px, 0.82fr) minmax(340px, 1fr); gap: clamp(2.5rem, 7vw, 6.5rem); align-items: start; }
+.contribute-intro .section-index { color: #6b7a70; }
+.contribute-intro h2 { max-width: 380px; margin-bottom: 1.5rem; color: #253d35; font-size: clamp(2.9rem, 4.4vw, 4.6rem); letter-spacing: -0.045em; line-height: 0.96; }
+.contribute-intro > p { max-width: 400px; color: #4f5b53; font-size: 0.91rem; line-height: 1.85; }
+.contribute-intro .margin-line { width: 44px; margin: 2.2rem 0 1rem; }
+.contribute-aside { max-width: 260px; color: #5c685f; font-family: "DM Serif Display", Georgia, serif; font-size: 1rem; font-style: italic; line-height: 1.35; }
+
+.contribute-card { position: relative; padding: 2.4rem 2.2rem 1.9rem; border: 1px solid rgba(32, 43, 39, 0.2); background: #f9f6ef; box-shadow: 10px 12px 0 rgba(37, 61, 53, 0.08); transform: rotate(-0.5deg); }
+.contribute-card .note-pin { top: -6px; left: 2.4rem; width: 11px; height: 11px; }
+
+.field { margin: 0 0 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.field-label { color: #5e6d64; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.16em; line-height: 1.2; text-transform: uppercase; }
+.field-optional { margin-left: 0.4rem; color: #93a096; font-weight: 500; letter-spacing: 0.1em; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
+
+.contribute-card input[type="text"], .contribute-card input[type="email"], .contribute-card textarea {
+  width: 100%;
+  padding: 0.5rem 0 0.55rem;
+  border: 0;
+  border-bottom: 1px solid rgba(32, 43, 39, 0.28);
+  background: transparent;
+  color: #253d35;
+  font-family: "Manrope", Arial, sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  transition: border-color 180ms ease;
+}
+.contribute-card textarea { resize: vertical; min-height: 118px; }
+.contribute-card ::placeholder { color: #9aa69c; }
+.contribute-card input:focus-visible, .contribute-card textarea:focus-visible { border-bottom-color: #d85b45; outline: none; }
+.contribute-card input:user-invalid, .contribute-card textarea:user-invalid { border-bottom-color: #c2543f; }
+
+.field-purpose { margin: 0 0 1.7rem; padding: 0; border: 0; display: grid; gap: 0.55rem; }
+.field-purpose .field-label { margin-bottom: 0.35rem; padding: 0; }
+.purpose-option { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.6rem 0.8rem; border: 1px solid rgba(32, 43, 39, 0.16); background: #f4f0e8; transition: border-color 160ms ease, background 160ms ease; }
+.purpose-option:hover { border-color: rgba(216, 91, 69, 0.5); }
+.purpose-option input { margin-top: 0.28rem; accent-color: #d85b45; flex: none; }
+.purpose-option:has(input:checked) { border-color: #d85b45; background: #f9f2ec; }
+.purpose-option:has(input:focus-visible) { outline: 2px solid #d85b45; outline-offset: 2px; }
+.purpose-option span { display: flex; flex-direction: column; gap: 0.15rem; }
+.purpose-option strong { color: #253d35; font-size: 0.87rem; font-weight: 600; }
+.purpose-option em { color: #6d7a71; font-size: 0.78rem; font-style: normal; line-height: 1.5; }
+
+/* Honeypot: hidden from everyone, including screen readers — a sighted or
+   assistive-tech user must never be asked to fill this in. Only bots do. */
+.honeypot { display: none; }
+
+.contribute-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.9rem; margin-top: 1.9rem; }
+.contribute-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.78rem 1.4rem;
+  border: 0;
+  background: #d85b45;
+  color: #fffaf4;
+  font-family: "Manrope", Arial, sans-serif;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: background 180ms ease, transform 160ms ease;
+}
+.contribute-submit:hover:not(:disabled) { background: #c44e39; }
+.contribute-submit:active:not(:disabled) { transform: scale(0.98); }
+.contribute-submit:disabled { background: #c9a99f; cursor: progress; }
+.contribute-fineprint { margin: 0; color: #7b877f; font-size: 0.73rem; line-height: 1.5; }
+
+.form-status:empty { display: none; }
+.form-status { margin: 1.1rem 0 0; padding-top: 0.9rem; border-top: 1px solid rgba(32, 43, 39, 0.14); color: #b8452e; font-size: 0.82rem; line-height: 1.6; }
+
+.contribute-thanks h3 { margin-bottom: 0.7rem; color: #253d35; font-size: 1.85rem; letter-spacing: -0.03em; line-height: 1.05; }
+.contribute-thanks p { max-width: 400px; margin-bottom: 1.4rem; color: #55615a; font-size: 0.88rem; line-height: 1.8; }
+.contribute-thanks .reflection-button { color: #506158; }
+
 .site-footer { width: min(100% - 2.5rem, 1440px); min-height: 130px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1.5rem; border-top: 1px solid rgba(32, 43, 39, 0.18); }
 .footer-brand img { width: 26px; height: 26px; }
 .site-footer > p { margin: 0; color: #718078; font-family: "DM Serif Display", Georgia, serif; font-size: 0.95rem; font-style: italic; }
@@ -217,6 +293,7 @@ h1 {
   .honor-section { grid-template-columns: 135px 1fr; }
   .honor-stamp { position: absolute; right: 2rem; bottom: 3rem; }
   .photo-story-section { grid-template-columns: 0.8fr 1fr; }
+  .contribute-grid { grid-template-columns: 1fr; gap: 2.6rem; }
   .story-image-b { display: none; }
 }
 
@@ -250,6 +327,12 @@ h1 {
   .dedication-main h2 { font-size: clamp(3.25rem, 14vw, 4.65rem); }
   .reflection-card { padding: 1.8rem 1.4rem 1.4rem 2.7rem; }
   .reflection-quote { left: 0.85rem; }
+  .contribute-section { padding: 5.5rem 1.25rem; }
+  .contribute-intro h2 { font-size: clamp(2.9rem, 12vw, 4rem); }
+  .contribute-card { padding: 2rem 1.35rem 1.6rem; transform: none; }
+  .contribute-card .note-pin { left: 1.5rem; }
+  .field-row { grid-template-columns: 1fr; gap: 0; }
+  .contribute-actions { flex-direction: column; align-items: flex-start; }
   .site-footer { min-height: 160px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1rem; }
   .top-link { align-self: flex-end; margin-top: -2rem; }
 }

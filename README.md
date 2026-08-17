@@ -78,6 +78,32 @@ and it would be wrong for a photograph. The frames expect roughly 4:3 (hero),
 0.8 portrait (window), and 1.12 (hands); CSS applies `object-fit: cover`, so
 other ratios crop rather than distort.
 
+## Contact form
+
+The "Add your voice" section posts to [Formspree](https://formspree.io) so the
+site stays fully static — there is no backend to run or secret to hold. The
+endpoint lives in
+[`client/src/components/ContributeForm.tsx`](client/src/components/ContributeForm.tsx);
+form action URLs are public by design, since they appear in page markup either
+way.
+
+The form submits with `fetch` and `Accept: application/json`, so Formspree
+answers with JSON instead of redirecting away from the page. That keeps the
+visitor where they are and lets the component render its own success and error
+states.
+
+Fields sent: `purpose` (testimonial or offer to contribute), `name`, `email`
+(optional), `message`, and a `_subject` so the notification email is labelled.
+
+Spam is handled by a `_gotcha` honeypot, which Formspree drops silently when
+filled. It is `display: none` rather than visually-hidden **on purpose** — a
+visually-hidden field stays in the accessibility tree, so a screen-reader user
+would be asked to fill in a decoy.
+
+To point the form somewhere else, change `FORMSPREE_ENDPOINT`. To add a field,
+give it a `name` and it is included automatically — the body is built from
+`FormData`, not a hand-written object.
+
 ## Deployment
 
 The repo is wired to Cloudflare Workers Builds (worker `momsanytime-com`).
