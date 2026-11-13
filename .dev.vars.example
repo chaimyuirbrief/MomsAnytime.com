@@ -1,0 +1,8 @@
+# Local development only: copy to .dev.vars (gitignored) for `pnpm dev:worker`.
+# These are Cloudflare's documented always-pass Turnstile TEST keys, not
+# secrets. The CAPTCHA wall accepts them only for a request to localhost from
+# this machine; anywhere else they are a 503. Production keys are set by the
+# owner: TURNSTILE_SITE_KEY in wrangler.jsonc vars, TURNSTILE_SECRET_KEY with
+# `wrangler secret put TURNSTILE_SECRET_KEY`.
+TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA

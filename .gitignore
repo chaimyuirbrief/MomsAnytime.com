@@ -13,6 +13,9 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+# wrangler dev: local secrets (copy .dev.vars.example) and its state
+.dev.vars
+.wrangler/
 
 # IDE and editor files
 .vscode/
