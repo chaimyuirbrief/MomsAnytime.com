@@ -9,6 +9,11 @@
    env.ASSETS below, after the wall.
 
    Order in fetch(), as the standard sets it:
+     (0) http -> https  a bare redirect for an http:// request from a real
+                        visitor, not a loopback host or client (shared/https.ts):
+                        the pass cookie is Secure, so it can only be stored
+                        over https. No site content, so it may run first
+                        (gate-kit/INTEGRATION.md §3).
      (1) deny list      none: the site has no database
      (2) CAPTCHA wall   captcha.handle(); its answers go back untouched
      (3) detection      none: no scanner/decoy detection or alert mail exists
@@ -17,6 +22,12 @@
 import { createGate } from "./gate-kit/gate.mjs";
 import type { GateEnv, GateExecutionContext } from "./gate-kit/gate.mjs";
 import { captchaOptions } from "./shared/captcha.ts";
+import {
+  HTTPS_REDIRECT_CACHE_CONTROL,
+  httpsLocation,
+  httpsRedirectStatus,
+  isLoopbackClient,
+} from "./shared/https.ts";
 
 /** The static-assets binding: dist/public with the SPA fallback (wrangler.jsonc). */
 export interface AssetsBinding {
@@ -65,12 +76,39 @@ export async function serveAsset(
   return res;
 }
 
+/**
+ * A plain http:// request to the real site, answered with a redirect to its
+ * https:// URL and nothing else; null for https, for loopback hosts and for a
+ * loopback client (`wrangler dev`). Cloudflare hands the Worker http://
+ * requests unless the zone's "Always Use HTTPS" is on, and without this a
+ * visitor there could never keep a pass.
+ */
+export function httpsRedirect(request: Request): Response | null {
+  if (isLoopbackClient(request.headers.get("cf-connecting-ip"))) return null;
+  const url = new URL(request.url);
+  const location = httpsLocation(
+    url.protocol,
+    url.host,
+    url.pathname + url.search
+  );
+  if (!location) return null;
+  return new Response(null, {
+    status: httpsRedirectStatus(request.method),
+    headers: {
+      Location: location,
+      "Cache-Control": HTTPS_REDIRECT_CACHE_CONTROL,
+    },
+  });
+}
+
 export default {
   async fetch(
     request: Request,
     env: Env,
     ctx: GateExecutionContext
   ): Promise<Response> {
+    const insecure = httpsRedirect(request);
+    if (insecure) return insecure;
     const blocked = await captcha.handle(request, env, ctx);
     if (blocked) return blocked;
     return captcha.decorate(await serveAsset(request, env));

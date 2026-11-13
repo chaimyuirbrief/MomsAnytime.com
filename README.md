@@ -13,18 +13,18 @@ Requires Node 22+ and pnpm.
 
 ```bash
 pnpm install
-pnpm dev        # dev server on http://localhost:3000
+pnpm dev        # dev server on http://localhost:3000 (this machine only; no CAPTCHA wall)
 ```
 
 ## Scripts
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev` | Vite dev server with HMR (no CAPTCHA wall: it doesn't run the Worker) |
+| `pnpm dev` | Vite dev server with HMR, on this machine only (no CAPTCHA wall: it doesn't run the Worker) |
 | `pnpm dev:worker` | The real Worker, wall included, on http://localhost:8787 (`wrangler dev`; builds first). Needs `.dev.vars`, see [CAPTCHA wall](#captcha-wall) |
 | `pnpm build` | Builds the client to `dist/public` and the static server to `dist/index.js` |
 | `pnpm start` | Serves the production build (`NODE_ENV=production node dist/index.js`) |
-| `pnpm preview` | Previews the production client build via Vite |
+| `pnpm preview` | Previews the production client build via Vite, on this machine only (no CAPTCHA wall) |
 | `pnpm check` | TypeScript typecheck (`tsc --noEmit`) |
 | `pnpm test` | The Gate kit's own suite, then the Worker and Node server tests in `test/` |
 | `pnpm format` | Prettier over the repo |
@@ -45,6 +45,7 @@ server/app.ts           Express app for Node hosts: the same wall, then the stat
 server/index.ts         Starts server/app.ts (`pnpm start`)
 shared/                 Constants shared between client and server
   captcha.ts            The wall's options, shared by worker.ts and server/app.ts
+  https.ts              The http -> https redirect worker.ts runs ahead of the wall
 gate-kit/               The shared Gate kit, vendored unchanged (never edit it here)
 test/                   Worker and Node server tests (`pnpm test`)
 docs/design-brief.md    Design direction, palette, typography, voice
@@ -111,6 +112,19 @@ To point the form somewhere else, change `FORMSPREE_ENDPOINT`. To add a field,
 give it a `name` and it is included automatically — the body is built from
 `FormData`, not a hand-written object.
 
+**The form is not behind the [CAPTCHA wall](#captcha-wall).** The browser posts
+straight to Formspree, so the wall never sees a submission. The endpoint is in
+this public repository (and its history), and Formspree accepts a post from any
+origin, so a script can send notes, and with them notification emails, without
+ever loading momsanytime.com or solving the CAPTCHA. Only Formspree's own spam
+filtering and the honeypot stand in the way. Until the owner decides otherwise,
+turn on Formspree's spam protection for the form (and its domain restriction to
+`momsanytime.com` and `www.momsanytime.com`, which stops casual reuse but not a
+script that forges the `Referer`). Putting the form behind the wall for real
+means a small `POST /contribute` route in `worker.ts` and `server/app.ts`, after
+the wall, that forwards to a new Formspree form whose ID is a secret, and then
+retiring the current form, whose ID is already public.
+
 ## Deployment
 
 The repo is wired to Cloudflare Workers Builds (worker `momsanytime-com`).
@@ -163,6 +177,12 @@ vendored unchanged into [`gate-kit/`](gate-kit/); its
   challenge.
 - Pages served on a pass are private (`Vary: Cookie`, `Cache-Control: private`),
   so no shared cache can hand them to someone without one.
+- Plain `http://` requests are redirected to `https://` before the wall (301,
+  or 308 for anything but GET/HEAD; `shared/https.ts`). The pass cookie is
+  `Secure`, and a browser won't store it from an `http://` response, so without
+  the redirect an `http://` visitor would solve the challenge and get it again,
+  forever. The redirect carries no content. `localhost` and `wrangler dev` are
+  left alone.
 - There are no exemptions: the site has no machine clients.
 - Counts of challenges served, solved and failed stay in memory
   (`captcha.stats()`); nothing is emailed or stored.
@@ -237,6 +257,21 @@ kit's Node adapter. It reads the same variables from the environment:
   Cloudflare's header only for Cloudflare's ranges first (nginx `realip`, Caddy
   `trusted_proxies`): `gate-kit/INTEGRATION.md` 4(c) has the exact lines.
 
+- **Redirect `http://` to `https://` at the proxy.** The pass cookie is
+  `Secure`, so a visitor on `http://` solves the challenge and never gets in.
+  On Cloudflare the Worker does this redirect itself; on a Node host it is the
+  proxy's job, because only the proxy knows how the visitor connected. Caddy
+  redirects by default. With nginx, answer port 80 with nothing but the
+  redirect:
+
+  ```nginx
+  server {
+      listen 80;
+      server_name momsanytime.com www.momsanytime.com;
+      return 301 https://$host$request_uri;
+  }
+  ```
+
 - **`GATE_LOCAL_DEV=1`**, a developer's machine only, never a server: accepts the
   test keys for `http://localhost:<port>` (not `127.0.0.1`). Ignored when
   `NODE_ENV=production`, so use `node dist/index.js` rather than `pnpm start`:
@@ -255,8 +290,26 @@ The pass cookie is `Secure`, so a Node host must be served over HTTPS.
   only ever see the challenge, marked `noindex`. The site drops out of search
   results, and shared links show no preview.
 - Uptime monitors and scripted fetches (`curl`, link checkers) get a 403.
-- The contribution form is unaffected once a visitor is through: it posts from
-  the browser straight to Formspree.
+- A link to a section (`/#contribute`, `/#honor`) opens at the top of the page
+  after the challenge: the shared kit's challenge page doesn't carry the
+  `#fragment` through (a kit fix, not a site one). Once a visitor has a pass,
+  section links work as before.
+
+### What the wall does not cover
+
+- **The contribution form's Formspree endpoint.** See
+  [Contact form](#contact-form): anyone can post to it without a pass.
+- **This repository.** It is public, so GitHub (for example
+  `raw.githubusercontent.com`) serves the page copy, the artwork in
+  `client/public/media/` and the rest of the source to anyone, with no CAPTCHA.
+  Making the repository private closes that (Workers Builds works with private
+  repositories through the Cloudflare GitHub app); keeping it public is a
+  reasonable choice for a site that invites contributions, but it is outside
+  the wall.
+- **`pnpm dev` and `pnpm preview`.** They run Vite, not the Worker, so they have
+  no wall. They listen on this machine only (`localhost`); pass `--host` for a
+  single run (`pnpm dev --host`) only to try the site from another device on a
+  network you trust.
 
 ## Notes
 

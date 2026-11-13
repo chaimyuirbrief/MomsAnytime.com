@@ -7,7 +7,9 @@ import { useState } from "react";
 import { ArrowUpRight, Send } from "lucide-react";
 
 // Formspree endpoint. Form action URLs are public by design — they live in the
-// page's markup either way — so this is not a secret.
+// page's markup either way — so this is not a secret. It is also not behind
+// the CAPTCHA wall: the browser posts straight to Formspree, so anyone can post
+// here without solving it (README: "Contact form").
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xwlerjkw";
 
 const purposes = [

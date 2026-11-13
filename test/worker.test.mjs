@@ -5,7 +5,7 @@
 // stubbed and any other outbound fetch fails the test.
 import { test, describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import worker, { captcha, serveAsset } from "../worker.ts";
+import worker, { captcha, serveAsset, httpsRedirect } from "../worker.ts";
 import {
   SITEVERIFY_URL,
   VERIFY_PATH,
@@ -436,6 +436,166 @@ describe("configuration", () => {
     const on = gateStatus({ ...KEYS });
     assert.equal(on.state, "on");
     assert.equal(on.ok, true);
+  });
+});
+
+describe("plain http is sent to https before the wall", () => {
+  // The pass is a Secure __Host- cookie, which a browser drops from an http://
+  // response, so without the redirect an http visitor loops on the challenge.
+  function httpReq(
+    url,
+    { method = "GET", accept = HTML, ip = IP, body, headers = {} } = {}
+  ) {
+    const h = new Headers(headers);
+    h.set("cf-connecting-ip", ip);
+    h.set("user-agent", UA);
+    h.set("accept", accept);
+    return new Request(url, {
+      method,
+      headers: h,
+      ...(body !== undefined ? { body } : {}),
+    });
+  }
+
+  test("every method and path on the real hosts gets a bare redirect to the same https URL", async () => {
+    const { env, ASSETS } = envWith();
+    const before = { ...captcha.stats().totals };
+    for (const host of [
+      HOST,
+      `www.${HOST}`,
+      `${HOST}:8080`,
+      "MomsAnytime.com",
+    ]) {
+      for (const [method, status] of [
+        ["GET", 301],
+        ["HEAD", 301],
+        ["POST", 308],
+        ["OPTIONS", 308],
+      ]) {
+        for (const path of [
+          "/",
+          "/no-such-page?ref=qr&x=%20y",
+          "/robots.txt",
+          VERIFY_PATH,
+        ]) {
+          const res = await worker.fetch(
+            httpReq(`http://${host}${path}`, {
+              method,
+              ...(method === "POST"
+                ? {
+                    body: "token=good.token_123&return=%2F",
+                    headers: {
+                      "content-type": "application/x-www-form-urlencoded",
+                    },
+                  }
+                : {}),
+            }),
+            env,
+            ctx
+          );
+          const where = `${method} http://${host}${path}`;
+          assert.equal(res.status, status, where);
+          const hostname = host.replace(/:\d+$/, "").toLowerCase();
+          assert.equal(
+            res.headers.get("location"),
+            `https://${hostname}${path}`,
+            where
+          );
+          assert.equal(
+            res.headers.get("cache-control"),
+            "no-store, private",
+            where
+          );
+          assert.equal(res.headers.get("set-cookie"), null, where);
+          assert.equal(await res.text(), "", `${where}: no content`);
+        }
+      }
+    }
+    assert.deepEqual(ASSETS.calls, [], "no file was read");
+    assert.deepEqual(siteverifyCalls, [], "verify never ran over http");
+    assert.deepEqual(captcha.stats().totals, before, "the wall never saw them");
+  });
+
+  test("it runs ahead of the wall: also with GATE_MODE off or no keys, nothing is served over http", async () => {
+    for (const env of [
+      envWith({ GATE_MODE: "off" }).env,
+      { ASSETS: spaAssets() },
+    ]) {
+      const res = await worker.fetch(httpReq(`http://${HOST}/`), env, ctx);
+      assert.equal(res.status, 301);
+      assert.equal(res.headers.get("location"), `https://${HOST}/`);
+      assert.deepEqual(env.ASSETS.calls, []);
+    }
+  });
+
+  test("https and loopback hosts are not redirected", async () => {
+    assert.equal(httpsRedirect(req("/")), null);
+    assert.equal(httpsRedirect(req("/", { host: `www.${HOST}` })), null);
+    for (const url of [
+      "http://localhost/",
+      "http://localhost:8787/no-such-page",
+      "http://127.0.0.1:8787/",
+      "http://[::1]:8787/",
+      "http://momsanytime.localhost:8787/",
+    ])
+      assert.equal(httpsRedirect(httpReq(url)), null, url);
+
+    // Plain `wrangler dev` rewrites requests to http://momsanytime.com/ and
+    // every Location back to http://localhost, so a redirect there would
+    // loop. Its client is loopback, which Cloudflare never sends.
+    for (const ip of ["127.0.0.1", "::1", "::ffff:127.0.0.1"])
+      assert.equal(httpsRedirect(httpReq(`http://${HOST}/`, { ip })), null, ip);
+    const plain = spaAssets();
+    const plainRes = await worker.fetch(
+      httpReq(`http://${HOST}/`, { ip: "127.0.0.1" }),
+      {
+        TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+        TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+        ASSETS: plain,
+      },
+      ctx
+    );
+    assert.equal(plainRes.status, 503, "the wall's own test-key answer");
+    assert.equal(plainRes.headers.get("location"), null);
+    assert.deepEqual(plain.calls, []);
+
+    // wrangler dev (`--local-upstream localhost`): the wall still answers.
+    const ASSETS = spaAssets();
+    const env = {
+      TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+      TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+      ASSETS,
+    };
+    const res = await worker.fetch(
+      httpReq("http://localhost:8787/", { ip: "127.0.0.1" }),
+      env,
+      ctx
+    );
+    assert.equal(res.status, 403);
+    assert.match(await res.text(), /before loading For All the Moms\./);
+    assert.deepEqual(ASSETS.calls, []);
+  });
+
+  test("after the redirect the https flow stores a pass and serves the site", async () => {
+    const { env } = envWith();
+    const hop = await worker.fetch(httpReq(`http://${HOST}/?ref=qr`), env, ctx);
+    assert.equal(hop.status, 301);
+    const target = new URL(hop.headers.get("location"));
+    assert.equal(target.protocol, "https:");
+    const challenge = await worker.fetch(
+      req(target.pathname + target.search, { accept: HTML }),
+      env,
+      ctx
+    );
+    assert.equal(challenge.status, 403);
+    const cookie = await passCookie(env, { ret: "/?ref=qr" });
+    const page = await worker.fetch(
+      req(target.pathname + target.search, { accept: HTML, cookie }),
+      env,
+      ctx
+    );
+    assert.equal(page.status, 200);
+    assert.equal(await page.text(), SITE_HTML);
   });
 });
 
