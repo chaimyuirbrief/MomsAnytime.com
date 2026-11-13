@@ -15,18 +15,45 @@
   // are listed because a custom domain matches its hostname exactly — an apex
   // entry does not cover www. Only production deploys (from the default branch)
   // attach these; a branch preview build will not.
+  //
+  // Because of these routes, `wrangler dev` rewrites every request's URL and
+  // Host to momsanytime.com, which the CAPTCHA wall answers with a 503 under
+  // the test keys. Run it as `pnpm dev:worker` (`--local-upstream localhost`,
+  // with no port: gate-kit/INTEGRATION.md §6).
   "routes": [
     { "pattern": "momsanytime.com", "custom_domain": true },
     { "pattern": "www.momsanytime.com", "custom_domain": true }
   ],
 
-  // The site is entirely static, so there is no Worker script: `assets` with no
-  // `main` deploys the built client on its own. `server/index.ts` stays for
-  // `pnpm start` and Node hosts — Workers cannot run an Express listener.
+  // The site is static, but nothing may load before the visitor has solved the
+  // CAPTCHA (PORTAL-STANDARD §10), so a small Worker sits in front of the built
+  // client: worker.ts runs the shared Gate kit (gate-kit/), then serves
+  // dist/public through the ASSETS binding. `server/index.ts` stays for
+  // `pnpm start` and Node hosts, with the same wall in front.
+  "main": "worker.ts",
+
   "assets": {
     "directory": "./dist/public",
+    "binding": "ASSETS",
+    // Every path, every method, runs the Worker first, so no file is ever
+    // served around the CAPTCHA wall (PORTAL-STANDARD §10).
+    "run_worker_first": true,
     // wouter routes on the client, so unknown paths must return index.html
-    // rather than a 404 page.
+    // rather than a 404 page. This still applies to env.ASSETS.fetch() in
+    // worker.ts.
     "not_found_handling": "single-page-application"
   }
+
+  // CAPTCHA wall keys (gate-kit/INTEGRATION.md §6-7). The public Turnstile site
+  // key goes here once the owner has created the widget for momsanytime.com and
+  // www.momsanytime.com:
+  //
+  //   , "vars": { "TURNSTILE_SITE_KEY": "<the widget's site key>" }
+  //
+  // It is left out until a real key exists: an empty or made-up value would
+  // only replace a real one on the next deploy. Put it here rather than in the
+  // dashboard alone, because deploys replace dashboard variables with this
+  // file's (keep_vars is off). The secret never goes in this file:
+  // `wrangler secret put TURNSTILE_SECRET_KEY`. Until both exist the Worker
+  // answers every request with a 503 (the wall fails closed).
 }

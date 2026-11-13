@@ -3,3 +3,5 @@ node_modules
 .git
 *.min.js
 *.min.css
+# Vendored Gate kit: kept byte-identical to the shared kit, never reformatted
+gate-kit
