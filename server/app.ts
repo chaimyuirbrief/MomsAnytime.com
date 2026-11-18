@@ -5,18 +5,50 @@ import type { GateEnv, GateOptions } from "../gate-kit/gate.mjs";
 import { createNodeGate } from "../gate-kit/gate-node.mjs";
 import type { TrustCloudflare } from "../gate-kit/gate-node.mjs";
 import { captchaOptions } from "../shared/captcha.ts";
+import {
+  CONTRIBUTE_PATH,
+  MAX_CONTRIBUTE_BYTES,
+  handleContribute,
+  type ContributeEnv,
+} from "../shared/contribute.ts";
 
 export interface AppOptions {
   /** The built client (dist/public). */
   staticPath: string;
   /** Where the Turnstile keys and GATE_* variables live. Default: process.env. */
-  env?: GateEnv | NodeJS.ProcessEnv;
+  env?: (GateEnv & ContributeEnv) | NodeJS.ProcessEnv;
   /** Which socket peers may set CF-Connecting-IP (gate-kit INTEGRATION.md 4(c)). */
   trustCloudflare?: TrustCloudflare;
   /** GATE_LOCAL_DEV=1: test keys from http://localhost on this machine only. */
   localDev?: boolean;
   /** Tests only: a stand-in for Turnstile's siteverify. */
   fetch?: GateOptions["fetch"];
+  /** Tests only: a stand-in for the forward to Formspree (POST /contribute). */
+  formspreeFetch?: typeof fetch;
+}
+
+/**
+ * The request body, or null once it passes `limit` bytes (the connection's
+ * remaining upload is then discarded, not buffered).
+ */
+function readBody(req: express.Request, limit: number): Promise<Buffer | null> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let over = false;
+    req.on("data", (chunk: Buffer) => {
+      if (over) return;
+      size += chunk.length;
+      if (size > limit) {
+        over = true;
+        chunks.length = 0;
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(over ? null : Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
 }
 
 /**
@@ -70,6 +102,43 @@ export function createApp(options: AppOptions) {
         .set("Cache-Control", "no-store, private")
         .end("Not available: the CAPTCHA gate failed.");
     });
+  });
+
+  // The "Add your voice" form, after the wall: the twin of worker.ts's
+  // POST /contribute (shared/contribute.ts does the work for both).
+  app.all(CONTRIBUTE_PATH, async (req, res, next) => {
+    try {
+      const headers = new Headers();
+      for (const name of ["content-type", "content-length", "origin"]) {
+        const v = req.headers[name];
+        if (typeof v === "string") headers.set(name, v);
+      }
+      let body: Buffer | undefined;
+      if (req.method === "POST") {
+        const read = await readBody(req, MAX_CONTRIBUTE_BYTES);
+        // Over the limit: an empty body with an oversized length gets the 413.
+        if (read === null)
+          headers.set("content-length", String(MAX_CONTRIBUTE_BYTES + 1));
+        body = read ?? Buffer.alloc(0);
+      }
+      const answer = await handleContribute(
+        new Request(
+          `https://${req.headers.host || "localhost"}${CONTRIBUTE_PATH}`,
+          {
+            method: req.method,
+            headers,
+            ...(body !== undefined ? { body } : {}),
+          }
+        ),
+        (options.env ?? process.env) as ContributeEnv,
+        options.formspreeFetch ? { fetch: options.formspreeFetch } : {}
+      );
+      res.status(answer.status);
+      answer.headers.forEach((v, k) => res.setHeader(k, v));
+      res.end(Buffer.from(await answer.arrayBuffer()));
+    } catch (err) {
+      next(err);
+    }
   });
 
   app.use(express.static(staticPath));

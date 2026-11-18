@@ -6,11 +6,10 @@
 import { useState } from "react";
 import { ArrowUpRight, Send } from "lucide-react";
 
-// Formspree endpoint. Form action URLs are public by design — they live in the
-// page's markup either way — so this is not a secret. It is also not behind
-// the CAPTCHA wall: the browser posts straight to Formspree, so anyone can post
-// here without solving it (README: "Contact form").
-const FORMSPREE_ENDPOINT = "https://formspree.io/f/xwlerjkw";
+// The site's own route, behind the CAPTCHA wall: worker.ts (and server/app.ts)
+// check the pass, keep only the known fields and forward the note to Formspree,
+// whose form ID is a server-side secret (README: "Contact form").
+const CONTRIBUTE_ENDPOINT = "/contribute";
 
 const purposes = [
   {
@@ -40,7 +39,7 @@ export default function ContributeForm() {
     setErrorMessage("");
 
     try {
-      const response = await fetch(FORMSPREE_ENDPOINT, {
+      const response = await fetch(CONTRIBUTE_ENDPOINT, {
         method: "POST",
         headers: { Accept: "application/json" },
         body: new FormData(form),
@@ -86,7 +85,6 @@ export default function ContributeForm() {
     <form className="contribute-card" onSubmit={handleSubmit} noValidate={false}>
       <span className="note-pin" aria-hidden="true" />
 
-      <input type="hidden" name="_subject" value="For All the Moms — a new note" />
       {/* Honeypot: real people never see this, bots fill it in. */}
       <p className="honeypot" aria-hidden="true">
         <label htmlFor="company">Company</label>

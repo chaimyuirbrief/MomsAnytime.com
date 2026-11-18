@@ -32,6 +32,15 @@
   // `pnpm start` and Node hosts, with the same wall in front.
   "main": "worker.ts",
 
+  // Only the custom domains above serve the site. A workers.dev host or a
+  // preview URL would be one more host for the Turnstile widget to list, and
+  // older preview versions keep the code they were built with, so pre-wall
+  // previews would keep serving the whole site without a CAPTCHA
+  // (gate-kit/INTEGRATION.md §7 step 0). Both settings take effect on the next
+  // deploy; turn Preview URLs off in the dashboard as well.
+  "workers_dev": false,
+  "preview_urls": false,
+
   "assets": {
     "directory": "./dist/public",
     "binding": "ASSETS",
@@ -56,4 +65,10 @@
   // file's (keep_vars is off). The secret never goes in this file:
   // `wrangler secret put TURNSTILE_SECRET_KEY`. Until both exist the Worker
   // answers every request with a 503 (the wall fails closed).
+  //
+  // The contribution form (POST /contribute, shared/contribute.ts) forwards to
+  // the Formspree form named by the secret FORMSPREE_FORM_ID:
+  // `wrangler secret put FORMSPREE_FORM_ID`. Never a var here: an ID in this
+  // public file could be posted to directly, around the wall. Until it is set
+  // the old, public form ID is used.
 }

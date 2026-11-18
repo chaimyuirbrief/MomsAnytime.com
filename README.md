@@ -45,7 +45,7 @@ server/app.ts           Express app for Node hosts: the same wall, then the stat
 server/index.ts         Starts server/app.ts (`pnpm start`)
 shared/                 Constants shared between client and server
   captcha.ts            The wall's options, shared by worker.ts and server/app.ts
-  https.ts              The http -> https redirect worker.ts runs ahead of the wall
+  contribute.ts         POST /contribute: the form, forwarded to Formspree after the wall
 gate-kit/               The shared Gate kit, vendored unchanged (never edit it here)
 test/                   Worker and Node server tests (`pnpm test`)
 docs/design-brief.md    Design direction, palette, typography, voice
@@ -88,42 +88,57 @@ other ratios crop rather than distort.
 
 ## Contact form
 
-The "Add your voice" section posts to [Formspree](https://formspree.io) so the
-site stays fully static — there is no backend to run or secret to hold. The
-endpoint lives in
-[`client/src/components/ContributeForm.tsx`](client/src/components/ContributeForm.tsx);
-form action URLs are public by design, since they appear in page markup either
-way.
+The "Add your voice" section posts to the site's own `POST /contribute`, which
+is behind the [CAPTCHA wall](#captcha-wall) like everything else: without a
+pass it gets the wall's 403 and nothing is sent. With one,
+[`shared/contribute.ts`](shared/contribute.ts) (run by `worker.ts` and mirrored
+in `server/app.ts`) forwards the note to [Formspree](https://formspree.io),
+which emails it to the owner. The browser never talks to Formspree, and the
+client bundle no longer contains a form ID.
 
-The form submits with `fetch` and `Accept: application/json`, so Formspree
-answers with JSON instead of redirecting away from the page. That keeps the
-visitor where they are and lets the component render its own success and error
-states.
+What the route accepts:
 
-Fields sent: `purpose` (testimonial or offer to contribute), `name`, `email`
-(optional), `message`, and a `_subject` so the notification email is labelled.
+- `POST` only, `multipart/form-data` or `application/x-www-form-urlencoded`,
+  from the same origin (a cross-site `Origin` is refused).
+- At most 32 KB of body (413 beyond that, read as a stream so a huge upload is
+  never held), and only these fields, each with a length cap: `purpose` (100),
+  `name` (200, required), `email` (254, optional), `message` (10,000,
+  required). Anything else, including Formspree's special fields (`_next`,
+  `_cc`, `_replyto`), is dropped. The `_subject` is set by the server.
+- `_gotcha` is the honeypot: when it is filled in, the route answers as if it
+  worked and sends nothing. It is `display: none` rather than visually-hidden
+  **on purpose** — a visually-hidden field stays in the accessibility tree, so
+  a screen-reader user would be asked to fill in a decoy.
 
-Spam is handled by a `_gotcha` honeypot, which Formspree drops silently when
-filled. It is `display: none` rather than visually-hidden **on purpose** — a
-visually-hidden field stays in the accessibility tree, so a screen-reader user
-would be asked to fill in a decoy.
+Answers keep Formspree's `{ "errors": [{ "message" }] }` shape, so the form
+shows them as before. Formspree's own validation messages ("should be an
+email") are passed on; anything else (an unknown form ID, an outage) becomes
+"That did not send. Please try once more."
 
-To point the form somewhere else, change `FORMSPREE_ENDPOINT`. To add a field,
-give it a `name` and it is included automatically — the body is built from
-`FormData`, not a hand-written object.
+**The Formspree form ID is a secret, `FORMSPREE_FORM_ID`.** Until it is set the
+route falls back to the old form ID, `xwlerjkw`, so nothing breaks before the
+owner acts. That old ID is public (it was in the client bundle and is in this
+repository's history), and Formspree accepts a post to it from anywhere,
+without the CAPTCHA. So:
 
-**The form is not behind the [CAPTCHA wall](#captcha-wall).** The browser posts
-straight to Formspree, so the wall never sees a submission. The endpoint is in
-this public repository (and its history), and Formspree accepts a post from any
-origin, so a script can send notes, and with them notification emails, without
-ever loading momsanytime.com or solving the CAPTCHA. Only Formspree's own spam
-filtering and the honeypot stand in the way. Until the owner decides otherwise,
-turn on Formspree's spam protection for the form (and its domain restriction to
-`momsanytime.com` and `www.momsanytime.com`, which stops casual reuse but not a
-script that forges the `Referer`). Putting the form behind the wall for real
-means a small `POST /contribute` route in `worker.ts` and `server/app.ts`, after
-the wall, that forwards to a new Formspree form whose ID is a secret, and then
-retiring the current form, whose ID is already public.
+1. Create a **new** form in Formspree (same notification email).
+2. `npx wrangler secret put FORMSPREE_FORM_ID` with the new form's ID (the part
+   after `/f/`); for a Node host, set it in the environment.
+3. Check a real note arrives, then **delete or disable the old form
+   `xwlerjkw`** in Formspree. Until then it can still be used around the wall.
+
+Don't turn on the new form's domain restriction or reCAPTCHA: the submission
+now comes from the server, not the visitor's browser. The CAPTCHA wall is the
+bot check.
+
+Under `pnpm dev` and `pnpm preview` (Vite alone) there is no `/contribute`, so
+the form shows its error; run `pnpm dev:worker` to try it. Don't send a test
+note there with the real secret set: it would email the owner.
+
+To add a field, give it a `name` in
+[`ContributeForm.tsx`](client/src/components/ContributeForm.tsx) **and** add it
+to `CONTRIBUTE_FIELDS` in `shared/contribute.ts`; the route drops fields it
+doesn't know.
 
 ## Deployment
 
@@ -177,12 +192,13 @@ vendored unchanged into [`gate-kit/`](gate-kit/); its
   challenge.
 - Pages served on a pass are private (`Vary: Cookie`, `Cache-Control: private`),
   so no shared cache can hand them to someone without one.
-- Plain `http://` requests are redirected to `https://` before the wall (301,
-  or 308 for anything but GET/HEAD; `shared/https.ts`). The pass cookie is
-  `Secure`, and a browser won't store it from an `http://` response, so without
-  the redirect an `http://` visitor would solve the challenge and get it again,
-  forever. The redirect carries no content. `localhost` and `wrangler dev` are
-  left alone.
+- Plain `http://` requests are redirected to `https://` by the wall itself
+  (Gate kit 1.3.0: 301, or 308 for anything but GET/HEAD, with no content).
+  The pass cookie is `Secure`, and a browser won't store it from an `http://`
+  response, so without the redirect an `http://` visitor would solve the
+  challenge and get it again, forever. `localhost` and loopback clients (plain
+  `wrangler dev`) are left alone, so local development doesn't loop. With
+  `GATE_MODE=off` there is no redirect, as there is no pass to keep.
 - There are no exemptions: the site has no machine clients.
 - Counts of challenges served, solved and failed stay in memory
   (`captcha.stats()`); nothing is emailed or stored.
@@ -193,8 +209,9 @@ Until both keys exist, every request gets a plain 503 "Not available: CAPTCHA
 is not configured".
 
 1. Cloudflare dashboard → Turnstile → **Add widget**, mode **Managed**, with the
-   hostnames `momsanytime.com` and `www.momsanytime.com` (and any
-   `*.workers.dev` hostname of this Worker that should work).
+   hostnames `momsanytime.com` and `www.momsanytime.com`. (The `workers.dev`
+   host and preview URLs are off in `wrangler.jsonc`, so no other host serves
+   the site.)
 2. Put the **site key** in `wrangler.jsonc` under `vars` as `TURNSTILE_SITE_KEY`
    (the comment at the end of the file shows where). Not in the dashboard alone:
    deploys replace dashboard variables with the file's.
@@ -205,6 +222,12 @@ is not configured".
 
 Break-glass: a plain variable `GATE_MODE` = `off` lets everything through
 without a CAPTCHA. Set in the dashboard, it is cleared again by the next deploy.
+
+Preview URLs: `wrangler.jsonc` sets `"preview_urls": false` and
+`"workers_dev": false`, but only from the next deploy, and older preview
+versions keep the code they were built with (pre-wall previews serve the whole
+site). Turn **Preview URLs** off now in the dashboard: Workers → `momsanytime-com`
+→ Settings → Domains & Routes.
 
 ### Local development
 
@@ -259,10 +282,11 @@ kit's Node adapter. It reads the same variables from the environment:
 
 - **Redirect `http://` to `https://` at the proxy.** The pass cookie is
   `Secure`, so a visitor on `http://` solves the challenge and never gets in.
-  On Cloudflare the Worker does this redirect itself; on a Node host it is the
-  proxy's job, because only the proxy knows how the visitor connected. Caddy
-  redirects by default. With nginx, answer port 80 with nothing but the
-  redirect:
+  On Cloudflare the wall does this redirect itself. Behind a proxy that sets
+  `GATE_TRUST_CLOUDFLARE`, the Node adapter treats every request as https
+  (only the proxy knows how the visitor connected), so the redirect is the
+  proxy's job. Caddy redirects by default. With nginx, answer port 80 with
+  nothing but the redirect:
 
   ```nginx
   server {
@@ -290,15 +314,15 @@ The pass cookie is `Secure`, so a Node host must be served over HTTPS.
   only ever see the challenge, marked `noindex`. The site drops out of search
   results, and shared links show no preview.
 - Uptime monitors and scripted fetches (`curl`, link checkers) get a 403.
-- A link to a section (`/#contribute`, `/#honor`) opens at the top of the page
-  after the challenge: the shared kit's challenge page doesn't carry the
-  `#fragment` through (a kit fix, not a site one). Once a visitor has a pass,
-  section links work as before.
+- Section links (`/#contribute`, `/#honor`) survive the challenge (Gate kit
+  1.3.0 carries the `#fragment` through).
 
 ### What the wall does not cover
 
-- **The contribution form's Formspree endpoint.** See
-  [Contact form](#contact-form): anyone can post to it without a pass.
+- **The old Formspree form `xwlerjkw`**, until the owner deletes or disables
+  it. The site no longer uses it once `FORMSPREE_FORM_ID` is set, but its ID is
+  public and Formspree accepts posts to it from anywhere. See
+  [Contact form](#contact-form).
 - **This repository.** It is public, so GitHub (for example
   `raw.githubusercontent.com`) serves the page copy, the artwork in
   `client/public/media/` and the rest of the source to anyone, with no CAPTCHA.

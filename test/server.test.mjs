@@ -176,6 +176,79 @@ describe("Node server behind the wall", () => {
   });
 });
 
+describe("Node server: POST /contribute behind the wall", () => {
+  const calls = [];
+  let srv;
+  before(async () => {
+    srv = await start({
+      env: { ...KEYS, FORMSPREE_FORM_ID: "newSecretId42" },
+      formspreeFetch: async (url, init) => {
+        calls.push({
+          url: String(url),
+          body: Object.fromEntries(new URLSearchParams(String(init.body))),
+        });
+        return Response.json({ ok: true });
+      },
+    });
+  });
+  after(() => srv.server.close());
+  const form = (extra = "") =>
+    `purpose=A%20testimonial&name=Ruth&message=Thank%20you&_gotcha=&_next=https%3A%2F%2Fevil.example${extra}`;
+  const send = (opts = {}) =>
+    get(srv.port, "/contribute", {
+      method: "POST",
+      accept: "application/json",
+      body: form(),
+      ...opts,
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        origin: `https://${HOST}`,
+        ...(opts.headers || {}),
+      },
+    });
+
+  test("without a pass: 403, nothing forwarded", async () => {
+    const res = await send();
+    assert.equal(res.status, 403);
+    assert.equal(JSON.parse(res.body).code, "captcha_required");
+    assert.equal(calls.length, 0);
+  });
+
+  test("with a pass: forwarded to the secret form ID with only the allowed fields", async () => {
+    const cookie = await passCookie(srv.port);
+    const res = await send({ cookie });
+    assert.equal(res.status, 200, res.body);
+    assert.deepEqual(JSON.parse(res.body), { ok: true });
+    assert.match(res.headers["cache-control"], /\bprivate\b/);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "https://formspree.io/f/newSecretId42");
+    assert.deepEqual(Object.keys(calls[0].body).sort(), [
+      "_subject",
+      "message",
+      "name",
+      "purpose",
+    ]);
+  });
+
+  test("with a pass: GET 405, cross-origin 403, oversized 413; none forwarded", async () => {
+    calls.length = 0;
+    const cookie = await passCookie(srv.port);
+    const g = await get(srv.port, "/contribute", {
+      cookie,
+      accept: "application/json",
+    });
+    assert.equal(g.status, 405);
+    assert.equal(
+      (await send({ cookie, headers: { origin: "https://evil.example" } }))
+        .status,
+      403
+    );
+    const big = await send({ cookie, body: form(`&x=${"a".repeat(40_000)}`) });
+    assert.equal(big.status, 413);
+    assert.equal(calls.length, 0);
+  });
+});
+
 describe("Node server configuration", () => {
   test("missing keys: 503 for everything", async () => {
     const srv = await start({ env: {} });

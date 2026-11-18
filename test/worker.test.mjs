@@ -5,7 +5,7 @@
 // stubbed and any other outbound fetch fails the test.
 import { test, describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import worker, { captcha, serveAsset, httpsRedirect } from "../worker.ts";
+import worker, { captcha, serveAsset } from "../worker.ts";
 import {
   SITEVERIFY_URL,
   VERIFY_PATH,
@@ -63,12 +63,21 @@ function spaAssets() {
 
 let siteverifyCalls;
 let otherFetches;
+let formspreeCalls;
 const realFetch = globalThis.fetch;
 beforeEach(() => {
   siteverifyCalls = [];
   otherFetches = [];
+  formspreeCalls = [];
   globalThis.fetch = async (input, init) => {
     const url = String(input instanceof Request ? input.url : input);
+    if (url.startsWith("https://formspree.io/f/")) {
+      formspreeCalls.push({
+        url,
+        body: Object.fromEntries(new URLSearchParams(String(init.body))),
+      });
+      return Response.json({ ok: true });
+    }
     if (url !== SITEVERIFY_URL) {
       otherFetches.push(url);
       throw new Error(`unexpected outbound fetch ${url}`);
@@ -439,9 +448,12 @@ describe("configuration", () => {
   });
 });
 
-describe("plain http is sent to https before the wall", () => {
+describe("plain http is sent to https by the wall (Gate kit 1.3.0)", () => {
   // The pass is a Secure __Host- cookie, which a browser drops from an http://
   // response, so without the redirect an http visitor loops on the challenge.
+  // The kit does this inside captcha.handle() since 1.3.0; the site's own
+  // redirect (shared/https.ts) was removed as a duplicate. These tests pin the
+  // behaviour the site relies on.
   function httpReq(
     url,
     { method = "GET", accept = HTML, ip = IP, body, headers = {} } = {}
@@ -513,51 +525,77 @@ describe("plain http is sent to https before the wall", () => {
     }
     assert.deepEqual(ASSETS.calls, [], "no file was read");
     assert.deepEqual(siteverifyCalls, [], "verify never ran over http");
-    assert.deepEqual(captcha.stats().totals, before, "the wall never saw them");
+    const after = captcha.stats().totals;
+    const changed = Object.keys(after).filter(
+      k => (after[k] || 0) !== (before[k] || 0)
+    );
+    assert.deepEqual(
+      changed,
+      ["https_redirect"],
+      "only the redirect counter moved"
+    );
   });
 
-  test("it runs ahead of the wall: also with GATE_MODE off or no keys, nothing is served over http", async () => {
-    for (const env of [
-      envWith({ GATE_MODE: "off" }).env,
-      { ASSETS: spaAssets() },
+  test("with no keys, http still gets the redirect, not the 503 or content", async () => {
+    const env = { ASSETS: spaAssets() };
+    const res = await worker.fetch(httpReq(`http://${HOST}/`), env, ctx);
+    assert.equal(res.status, 301);
+    assert.equal(res.headers.get("location"), `https://${HOST}/`);
+    assert.deepEqual(env.ASSETS.calls, []);
+  });
+
+  test('GATE_MODE="off" (break-glass) serves http as before the wall: no pass is needed, so nothing loops', async () => {
+    const { env } = envWith({ GATE_MODE: "off" });
+    const res = await worker.fetch(httpReq(`http://${HOST}/`), env, ctx);
+    assert.equal(res.status, 200);
+    assert.equal(await res.text(), SITE_HTML);
+  });
+
+  test("https, loopback hosts and loopback clients are not redirected", async () => {
+    const keyed = envWith().env;
+    for (const r of [
+      req("/", { accept: HTML }),
+      req("/", { accept: HTML, host: `www.${HOST}` }),
     ]) {
-      const res = await worker.fetch(httpReq(`http://${HOST}/`), env, ctx);
-      assert.equal(res.status, 301);
-      assert.equal(res.headers.get("location"), `https://${HOST}/`);
-      assert.deepEqual(env.ASSETS.calls, []);
+      const res = await worker.fetch(r, keyed, ctx);
+      assert.equal(res.status, 403, r.url);
+      assert.equal(res.headers.get("location"), null);
     }
-  });
-
-  test("https and loopback hosts are not redirected", async () => {
-    assert.equal(httpsRedirect(req("/")), null);
-    assert.equal(httpsRedirect(req("/", { host: `www.${HOST}` })), null);
     for (const url of [
       "http://localhost/",
       "http://localhost:8787/no-such-page",
       "http://127.0.0.1:8787/",
       "http://[::1]:8787/",
       "http://momsanytime.localhost:8787/",
-    ])
-      assert.equal(httpsRedirect(httpReq(url)), null, url);
+    ]) {
+      const res = await worker.fetch(httpReq(url), keyed, ctx);
+      assert.notEqual(res.status, 301, url);
+      assert.equal(res.headers.get("location"), null, url);
+    }
 
-    // Plain `wrangler dev` rewrites requests to http://momsanytime.com/ and
-    // every Location back to http://localhost, so a redirect there would
-    // loop. Its client is loopback, which Cloudflare never sends.
-    for (const ip of ["127.0.0.1", "::1", "::ffff:127.0.0.1"])
-      assert.equal(httpsRedirect(httpReq(`http://${HOST}/`, { ip })), null, ip);
-    const plain = spaAssets();
-    const plainRes = await worker.fetch(
-      httpReq(`http://${HOST}/`, { ip: "127.0.0.1" }),
-      {
-        TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
-        TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
-        ASSETS: plain,
-      },
-      ctx
-    );
-    assert.equal(plainRes.status, 503, "the wall's own test-key answer");
-    assert.equal(plainRes.headers.get("location"), null);
-    assert.deepEqual(plain.calls, []);
+    // Plain `wrangler dev` (no --local-upstream) rewrites requests to
+    // http://momsanytime.com/ and every Location back to http://localhost, so
+    // a redirect there would loop. Its client is loopback, which Cloudflare
+    // never sends, and the kit exempts it: the wall's own 503 answers.
+    for (const ip of ["127.0.0.1", "::1", "::ffff:127.0.0.1"]) {
+      const plain = spaAssets();
+      const plainRes = await worker.fetch(
+        httpReq(`http://${HOST}/`, { ip }),
+        {
+          TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+          TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+          ASSETS: plain,
+        },
+        ctx
+      );
+      assert.equal(
+        plainRes.status,
+        503,
+        `${ip}: the wall's own test-key answer`
+      );
+      assert.equal(plainRes.headers.get("location"), null, ip);
+      assert.deepEqual(plain.calls, []);
+    }
 
     // wrangler dev (`--local-upstream localhost`): the wall still answers.
     const ASSETS = spaAssets();
@@ -596,6 +634,103 @@ describe("plain http is sent to https before the wall", () => {
     );
     assert.equal(page.status, 200);
     assert.equal(await page.text(), SITE_HTML);
+  });
+});
+
+describe("POST /contribute: the form, behind the wall", () => {
+  function note(extra = {}) {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries({
+      purpose: "A testimonial",
+      name: "Ruth",
+      message: "She fed everyone on our street.",
+      _gotcha: "",
+      ...extra,
+    }))
+      fd.append(k, v);
+    return fd;
+  }
+  function contribute(env, { cookie, ip, headers, body = note() } = {}) {
+    return worker.fetch(
+      req("/contribute", {
+        method: "POST",
+        accept: "application/json",
+        cookie,
+        ip,
+        headers: { origin: `https://${HOST}`, ...headers },
+        body,
+      }),
+      env,
+      ctx
+    );
+  }
+
+  test("without a pass: the wall's 403 JSON, and nothing reaches Formspree", async () => {
+    const { env } = envWith({ FORMSPREE_FORM_ID: "newSecretId42" });
+    const res = await contribute(env);
+    assert.equal(res.status, 403);
+    assert.equal((await res.json()).code, "captcha_required");
+    // A pass from another IP is no pass.
+    const cookie = await passCookie(env);
+    const other = await contribute(env, { cookie, ip: "198.51.100.20" });
+    assert.equal(other.status, 403);
+    assert.deepEqual(formspreeCalls, []);
+  });
+
+  test("with a pass: forwarded to the secret form ID, allowlisted, private", async () => {
+    const { env, ASSETS } = envWith({ FORMSPREE_FORM_ID: "newSecretId42" });
+    const cookie = await passCookie(env);
+    const res = await contribute(env, {
+      cookie,
+      body: note({ _next: "https://evil.example", _cc: "x@evil.example" }),
+    });
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { ok: true });
+    assert.match(res.headers.get("cache-control"), /\bprivate\b/);
+    assert.match(res.headers.get("vary"), /Cookie/);
+    assert.equal(formspreeCalls.length, 1);
+    assert.equal(formspreeCalls[0].url, "https://formspree.io/f/newSecretId42");
+    assert.deepEqual(Object.keys(formspreeCalls[0].body).sort(), [
+      "_subject",
+      "message",
+      "name",
+      "purpose",
+    ]);
+    assert.deepEqual(ASSETS.calls, [], "never served from the assets binding");
+  });
+
+  test("with a pass but no secret: the old public form, so nothing breaks before the owner acts", async () => {
+    const { env } = envWith();
+    const cookie = await passCookie(env);
+    assert.equal((await contribute(env, { cookie })).status, 200);
+    assert.equal(formspreeCalls[0].url, "https://formspree.io/f/xwlerjkw");
+  });
+
+  test("with a pass: GET is a 405, a cross-origin post a 403, too big a 413", async () => {
+    const { env, ASSETS } = envWith();
+    const cookie = await passCookie(env);
+    const get = await worker.fetch(req("/contribute", { cookie }), env, ctx);
+    assert.equal(get.status, 405);
+    assert.equal(
+      (
+        await contribute(env, {
+          cookie,
+          headers: { origin: "https://evil.example" },
+        })
+      ).status,
+      403
+    );
+    assert.equal(
+      (
+        await contribute(env, {
+          cookie,
+          body: note({ message: "x".repeat(40_000) }),
+        })
+      ).status,
+      413
+    );
+    assert.deepEqual(formspreeCalls, []);
+    assert.deepEqual(ASSETS.calls, []);
   });
 });
 
