@@ -51,6 +51,14 @@
     // rather than a 404 page. This still applies to env.ASSETS.fetch() in
     // worker.ts.
     "not_found_handling": "single-page-application"
+  },
+
+  "observability": {
+    // Workers Logs: every request, console output and uncaught exception,
+    // searchable under the Worker's Observability tab in the dashboard.
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": true }
   }
 
   // CAPTCHA wall keys (gate-kit/INTEGRATION.md §6-7). The public Turnstile site
