@@ -53,6 +53,10 @@
     "not_found_handling": "single-page-application"
   },
 
+  // Public CAPTCHA site key (widget created 2026-11-27); the secret is
+  // TURNSTILE_SECRET_KEY, set with `wrangler secret put`.
+  "vars": { "TURNSTILE_SITE_KEY": "0x4AAAAAAGVY4VSeIecXl3Of" },
+
   "observability": {
     // Workers Logs: every request, console output and uncaught exception,
     // searchable under the Worker's Observability tab in the dashboard.
