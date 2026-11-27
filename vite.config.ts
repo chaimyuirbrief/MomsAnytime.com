@@ -17,13 +17,20 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
+  // `pnpm dev` and `pnpm preview` serve the whole site with no CAPTCHA wall
+  // (they don't run worker.ts), so they listen on this machine only, never on
+  // every network interface. To try the site from a phone on the same
+  // network, pass `--host` for that one run: `pnpm dev --host`.
   server: {
     port: 3000,
     strictPort: false, // Will find next available port if 3000 is busy
-    host: true,
+    host: "localhost",
     fs: {
       strict: true,
       deny: ["**/.*"],
     },
+  },
+  preview: {
+    host: "localhost",
   },
 });
